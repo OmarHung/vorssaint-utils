@@ -947,6 +947,12 @@ struct Strings {
     let networkSection: String
     let networkIPAddresses: String
     let networkLocalIP: String
+    let networkPublicIP: String
+    let networkPublicIPCheck: String
+    let networkPublicIPCheckAgain: String
+    let networkPublicIPCopy: String
+    let networkPublicIPCopied: String
+    let networkPublicIPFailed: String
     let networkDownload: String
     let networkUpload: String
     let networkThisSession: String
@@ -2078,6 +2084,12 @@ extension Strings {
         networkSection: "Rede",
         networkIPAddresses: "Endereços IP",
         networkLocalIP: "IPv4 local",
+        networkPublicIP: "IP público",
+        networkPublicIPCheck: "Verificar",
+        networkPublicIPCheckAgain: "Verificar de novo",
+        networkPublicIPCopy: "Copiar",
+        networkPublicIPCopied: "Copiado",
+        networkPublicIPFailed: "Não foi possível verificar",
         networkDownload: "Download",
         networkUpload: "Upload",
         networkThisSession: "Nesta sessão",
@@ -3196,6 +3208,12 @@ extension Strings {
         networkSection: "Network",
         networkIPAddresses: "IP addresses",
         networkLocalIP: "Local IPv4",
+        networkPublicIP: "Public IP",
+        networkPublicIPCheck: "Check",
+        networkPublicIPCheckAgain: "Check again",
+        networkPublicIPCopy: "Copy",
+        networkPublicIPCopied: "Copied",
+        networkPublicIPFailed: "Couldn’t check",
         networkDownload: "Download",
         networkUpload: "Upload",
         networkThisSession: "This session",

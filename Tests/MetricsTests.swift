@@ -182,6 +182,7 @@ struct MetricsTests {
                 NetworkFeatureTests.run(suite)
                 SpeedTestTests.run(suite)
                 NetworkAddressTests.run { suite.expect($0, $1) }
+                PublicAddressTests.run(suite)
             }),
             ("app-updates", {
                 AppUpdateHandoffTests.run(suite)

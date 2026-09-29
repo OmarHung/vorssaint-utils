@@ -71,6 +71,10 @@ struct NetworkSection: View {
                 stopNetworkMonitoringIfNeeded()
             }
         }
+        .onChange(of: netAddresses) { _, visible in
+            // A hidden block keeps no public address and waits on no request.
+            if !visible { PublicAddressLookup.shared.cancel() }
+        }
         .onDisappear {
             appRefreshSerial &+= 1
             appRows = []
@@ -402,39 +406,131 @@ struct NetworkSection: View {
     }
 }
 
-/// The local address block. Nothing here leaves the machine.
+/// The address block. The local addresses never leave the machine; the public
+/// one is asked of Cloudflare only when the user presses Check.
 private struct NetworkAddressBlock: View {
     @ObservedObject var service: NetworkAddressService
     @Binding var isVisible: Bool
     var editing: Bool
     @ObservedObject private var l10n = L10n.shared
+    @ObservedObject private var lookup = PublicAddressLookup.shared
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var copied = false
+    private static let copiedFeedback: Duration = .seconds(1.5)
 
     var body: some View {
         if !isVisible {
             PanelHiddenItemRow(title: l10n.s.networkIPAddresses,
                                systemImage: "network", isVisible: $isVisible)
         } else {
-            HStack(alignment: .top, spacing: 6) {
-                Text(l10n.s.networkLocalIP)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                Spacer()
-                // Nothing connected: the value is left out, like the totals block.
-                if !service.localAddresses.isEmpty {
-                    Text(service.localAddresses.joined(separator: "\n"))
-                        .font(.system(size: 10.5, weight: .medium))
-                        .monospacedDigit()
-                        .multilineTextAlignment(.trailing)
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 6) {
+                    Text(l10n.s.networkLocalIP)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.tertiary)
+                    Spacer()
+                    // Nothing connected: the value is left out, like the totals block.
+                    if !service.localAddresses.isEmpty {
+                        Text(service.localAddresses.joined(separator: "\n"))
+                            .font(.system(size: 10.5, weight: .medium))
+                            .monospacedDigit()
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    if editing { PanelInlineHideButton(isVisible: $isVisible) }
                 }
-                if editing { PanelInlineHideButton(isVisible: $isVisible) }
+                publicAddressRow
             }
             // The interfaces are read only while this line is on screen: a
             // hidden block or a collapsed card costs nothing per snapshot.
-            .onAppear { service.refreshLocalAddresses() }
-            .onReceive(SystemMonitor.shared.$snapshot) { _ in service.refreshLocalAddresses() }
+            .onAppear(perform: readLocalAddresses)
+            .onReceive(SystemMonitor.shared.$snapshot) { _ in readLocalAddresses() }
             .onDisappear { service.cancel() }
         }
+    }
+
+    private func readLocalAddresses() {
+        service.refreshLocalAddresses()
+        lookup.forgetIfNetworkChanged(service.localAddresses)
+    }
+
+    private var publicAddressRow: some View {
+        HStack(spacing: 6) {
+            Text(l10n.s.networkPublicIP)
+                .font(.system(size: 10))
+                .foregroundStyle(.tertiary)
+            Spacer(minLength: 6)
+            switch lookup.phase {
+            case .idle:
+                EmptyView()
+            case .loading:
+                ProgressView().controlSize(.mini)
+            case .failed:
+                Text(l10n.s.networkPublicIPFailed)
+                    .font(.system(size: 10))
+                    .foregroundStyle(PanelMetricColor.orange(for: colorScheme))
+            case .loaded(let address):
+                Text(address)
+                    .font(.system(size: 10.5, weight: .medium))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+                    .help(address)
+                copyButton(address)
+            }
+            checkButton
+        }
+    }
+
+    private func copyButton(_ address: String) -> some View {
+        let label = copied ? l10n.s.networkPublicIPCopied : l10n.s.networkPublicIPCopy
+        return Button {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            copied = pasteboard.setString(address, forType: .string)
+            if !copied { NSSound.beep() }
+        } label: {
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 10, weight: .bold))
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.mini)
+        .help(label)
+        .accessibilityLabel(label)
+        .task(id: copied) {
+            guard copied else { return }
+            // Cancelled when the row goes away, which drops the tick anyway.
+            try? await Task.sleep(for: Self.copiedFeedback)
+            copied = false
+        }
+    }
+
+    /// Worded before the first answer, an icon beside one: the same action.
+    @ViewBuilder
+    private var checkButton: some View {
+        if lookup.phase == .idle {
+            Button(l10n.s.networkPublicIPCheck, action: checkPublicAddress)
+                .font(.system(size: 10))
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+        } else {
+            Button(action: checkPublicAddress) {
+                Image(systemName: "arrow.clockwise")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.mini)
+            .disabled(lookup.isLoading)
+            .help(l10n.s.networkPublicIPCheckAgain)
+            .accessibilityLabel(l10n.s.networkPublicIPCheckAgain)
+        }
+    }
+
+    private func checkPublicAddress() {
+        copied = false
+        lookup.refresh(network: service.localAddresses)
     }
 }
