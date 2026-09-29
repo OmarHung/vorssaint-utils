@@ -47,6 +47,8 @@ final class UpdateService: ObservableObject {
 
     var includeBetaUpdates: Bool {
         get {
+            // A fork build follows upstream's stable releases only.
+            if ForkSource.current != nil { return false }
             if let explicit = UserDefaults.standard.object(forKey: DefaultsKey.includeBetaUpdates) as? Bool {
                 return explicit
             }
@@ -62,6 +64,7 @@ final class UpdateService: ObservableObject {
     /// Called at launch: checks shortly after start and then daily, if enabled.
     func startAutomaticChecks() {
         consumeInstallResult()
+        ForkSyncService.shared.resumeAtLaunch()
         if AppInfo.isBeta && UserDefaults.standard.object(forKey: DefaultsKey.includeBetaUpdates) == nil {
             UserDefaults.standard.set(true, forKey: DefaultsKey.includeBetaUpdates)
         }
@@ -166,7 +169,7 @@ final class UpdateService: ObservableObject {
 
                 if let chosen = UpdateServiceSupport.selectUpdate(
                     from: candidates,
-                    currentVersion: AppInfo.version,
+                    currentVersion: ForkSource.current?.baseVersion ?? AppInfo.version,
                     includeBetas: self.includeBetaUpdates
                 ) {
                     let versionClean = chosen.tagName.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
@@ -205,7 +208,16 @@ final class UpdateService: ObservableObject {
 
     // MARK: - Download & install
 
-    func downloadAndInstall() {
+    func downloadAndInstall(offered: String? = nil) {
+        // A fork build syncs its own commits onto the release and rebuilds;
+        // the official DMG would drop them. The preview passes the version it
+        // showed, which a re-check running meanwhile cannot take away.
+        if ForkSource.current != nil {
+            var version = offered
+            if version == nil, case let .available(current) = state { version = current }
+            if let version { ForkSyncService.shared.start(tag: "v\(version)") }
+            return
+        }
         if AppInfo.isDeveloperBuild { return }  // never replace the local dev build over itself
         guard let downloadURL else { return }
         // Pre-flight BEFORE spending the download: a translocated app or one

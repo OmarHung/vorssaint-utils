@@ -428,6 +428,8 @@ if (( TEST )); then
         Sources/Vorssaint/Services/Finder/FinderRenameSupport.swift
         Sources/Vorssaint/Services/Update/UpdateInstallerSupport.swift
         Sources/Vorssaint/Services/Update/UpdateServiceSupport.swift
+        Sources/Vorssaint/Services/Update/ForkSyncSupport.swift
+        Sources/Vorssaint/Core/ForkSyncStrings.swift
         Sources/Vorssaint/Services/InstalledApps.swift
         Sources/Vorssaint/Services/LaunchAtLoginSupport.swift
         Sources/Vorssaint/UI/Settings/SettingsSearchSupport.swift
@@ -682,6 +684,11 @@ if (( DEV )); then
     [[ -n "$(git status --porcelain 2>/dev/null)" ]] && SHA="$SHA-dirty"
     /usr/libexec/PlistBuddy -c "Add :VorssaintBuildCommit string '$SHA · $(date '+%Y-%m-%d %H:%M')'" "$STAGE/Contents/Info.plist"
     echo "  stamped dev build: $SHA"
+fi
+# Fork builds record their source so the app syncs with upstream instead of
+# installing official releases (Tools/fork-maintenance, absent upstream).
+if (( ! DEV )) && [[ -f Tools/fork-maintenance/stamp-fork-source.sh ]]; then
+    /bin/zsh Tools/fork-maintenance/stamp-fork-source.sh "$STAGE/Contents/Info.plist"
 fi
 FAN_HELPER_VERSION="$(
     export LC_ALL=C

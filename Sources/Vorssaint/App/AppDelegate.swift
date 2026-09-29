@@ -2293,6 +2293,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     /// button most people use), so the changelog is always seen first. In the
     /// Developer build `downloadAndInstall()` is a no-op, so confirming is safe.
     func showUpdatePreview() {
+        // A fork build's sync in progress, stopped or built: show that, not the offer again.
+        if ForkSyncService.shared.isActive {
+            closePopover()
+            ForkSyncService.shared.showWindowIfActive()
+            return
+        }
         guard case let .available(version) = UpdateService.shared.state else { return }
         closePopover()
         if let window = updatePreviewWindow {
@@ -2305,7 +2311,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             notes: UpdateService.shared.availableNotes,
             onUpdate: { [weak self] in
                 self?.updatePreviewWindow?.close()
-                UpdateService.shared.downloadAndInstall()
+                UpdateService.shared.downloadAndInstall(offered: version)
             },
             onCancel: { [weak self] in
                 self?.updatePreviewWindow?.close()
