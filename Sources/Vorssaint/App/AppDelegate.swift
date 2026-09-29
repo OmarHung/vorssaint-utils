@@ -2605,6 +2605,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
     /// person chose to skip it. In the Developer build `downloadAndInstall()`
     /// is a no-op, so confirming is safe.
     func showUpdatePreview() {
+        // A fork build's sync in progress, stopped or built: show that, not the offer again.
+        if ForkSyncService.shared.isActive {
+            closePopover()
+            ForkSyncService.shared.showWindowIfActive()
+            return
+        }
         guard case let .available(version) = UpdateService.shared.state else { return }
         if let window = updatePreviewWindow {
             closePopover()
@@ -2628,7 +2634,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate, NSW
             notes: UpdateService.shared.availableNotes,
             onUpdate: { [weak self] in
                 self?.updatePreviewWindow?.close()
-                UpdateService.shared.downloadAndInstall()
+                UpdateService.shared.downloadAndInstall(offered: version)
             },
             onCancel: { [weak self] in
                 self?.updatePreviewWindow?.close()

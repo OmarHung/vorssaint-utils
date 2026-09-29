@@ -620,6 +620,7 @@ struct UpdatesView: View {
     @AppStorage(DefaultsKey.includeBetaUpdates) private var includeBetas = AppInfo.isBeta
     @AppStorage(DefaultsKey.showReleaseNotesBeforeUpdate) private var showReleaseNotesFirst = true
     @AppStorage(DefaultsKey.releaseNotesOnUpdate) private var showWhatsNewAfter = true
+    @ObservedObject private var forkSync = ForkSyncService.shared
 
     var body: some View {
         Section(l10n.s.updatesSection) {
@@ -628,12 +629,27 @@ struct UpdatesView: View {
                     UpdateService.shared.autoCheckEnabled = value
                 }
 
-            VStack(alignment: .leading, spacing: 4) {
-                Toggle(l10n.s.includeBetaUpdatesToggle, isOn: $includeBetas)
-                    .onChange(of: includeBetas) { _, value in
-                        UpdateService.shared.includeBetaUpdates = value
+            if let fork = ForkSource.current {
+                // Fork builds follow upstream's stable releases by syncing, so
+                // the beta switch has nothing to choose.
+                LabeledContent(FeatureStrings.forkSync(l10n.language).forkBuild) {
+                    Text("\(fork.branch) · \(fork.baseTag ?? "?") · \(fork.commit)")
+                        .font(.callout.monospaced())
+                        .textSelection(.enabled)
+                }
+                if forkSync.isActive {
+                    Button(FeatureStrings.forkSync(l10n.language).title) {
+                        forkSync.showWindowIfActive()
                     }
-                SettingsCaptionText(l10n.s.includeBetaUpdatesCaption)
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle(l10n.s.includeBetaUpdatesToggle, isOn: $includeBetas)
+                        .onChange(of: includeBetas) { _, value in
+                            UpdateService.shared.includeBetaUpdates = value
+                        }
+                    SettingsCaptionText(l10n.s.includeBetaUpdatesCaption)
+                }
             }
 
             VStack(alignment: .leading, spacing: 4) {
