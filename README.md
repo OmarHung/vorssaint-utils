@@ -81,7 +81,7 @@ Reorder or hide panel sections, choose a compact layout, and export settings to 
 - **System monitor.** CPU, GPU, memory, temperatures, battery health and power use, with history graphs and a view of energy-hungry apps.
 - **Fan Control (beta).** Set manual fan speeds or temperature curves and monitor live RPM.
 - **Menu bar readouts.** Put your chosen readings, usage bars, battery time or fan speed directly in the menu bar.
-- **Network.** See live traffic, session totals and your local IP address, or run a speed test.
+- **Network.** See live traffic, session totals and your local IP address, check your public IP, or run a speed test.
 - **Alerts.** Get notified about sustained CPU load, high temperatures, memory pressure, low disk space or low battery.
 
 ### Windows and the Dock
@@ -196,7 +196,7 @@ To remove Vorssaint completely, including its settings and permissions:
 
 ## Private by default
 
-Vorssaint is local-first, with no account, analytics or tracking. The network is touched only by things you can see: update checks, the speed test, Homebrew actions, optional online lyric lookup, temporary screenshot or recording links and feedback you explicitly send. The full story is in the [privacy notes](docs/PRIVACY.md).
+Vorssaint is local-first, with no account, analytics or tracking. The network is touched only by things you can see: update checks, the speed test and public IP check, Homebrew actions, optional online lyric lookup, temporary screenshot or recording links and feedback you explicitly send. The full story is in the [privacy notes](docs/PRIVACY.md).
 
 Permissions get the same treatment. Every one is optional, the app explains each in plain words, shows which features actually use it, and even tells you when a permission you granted is no longer needed by anything, with a shortcut to revoke it.
 
